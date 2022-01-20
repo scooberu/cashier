@@ -47,7 +47,7 @@ debts.reverse!
 today = Time.now
 first_of_next_month = Time.new(today.year, (today.month + 1), 1)
 
-pool = PAYCHECK
+pool = PAYCHECK - TARGET
 
 if (first_of_next_month - today) <= 1209600
 	puts "Your next paycheck needs rent money! Pay the rent. Removing rent money from available pool...".red
@@ -73,20 +73,20 @@ debts.each do |debt|
   print "\n"
 end
 
-if pool > TARGET
+if pool > 0.0
 # Allocate remainder to accounts in order of descending APR
   debts.each do |debt|
     break if pool <= TARGET
 
     if (debt[:balance] - debt[:payment]) <= pool
-      puts "LOG: available cash ($#{pool}) is greater than the balance of #{debt[:creditor]} debt (less any planned minimum payments); recommend paying #{debt[:creditor]} the full balance of $#{debt[:balance]}."
+      puts "LOG: available cash ($#{pool}) is greater than the balance of #{debt[:creditor]} debt (less any planned minimum payments); recommend paying #{debt[:creditor]} the full balance of $#{debt[:balance].round(2)}."
       pool -= (debt[:balance] - debt[:payment])
-      puts "LOG: pool is now $#{pool}, after subtracting $#{debt[:balance]} (orig. balance) - $#{debt[:payment]} (any preexisting payment)"
+      puts "LOG: pool is now $#{pool}, after subtracting $#{debt[:balance].round(2)} (orig. balance) - $#{debt[:payment].round(2)} (any preexisting payment)"
       debt[:payment] = debt[:balance]
-      puts "LOG: payment recommended for #{debt[:creditor]} is now $#{debt[:payment]}."
+      puts "LOG: payment recommended for #{debt[:creditor]} is now $#{debt[:payment].round(2)}."
     else
       puts "LOG: available cash is not sufficient to cover the balance of #{debt[:creditor]} debt; recommend dumping the rest of your cash into lowering that balance."
-      puts "LOG: adding remaining pool of cash ($#{pool}) to any existing payment planned for #{debt[:creditor]} account; total recommended payment is $#{debt[:payment] + pool}"
+      puts "LOG: adding remaining pool of cash ($#{pool}.round(2)) to any existing payment planned for #{debt[:creditor]} account; total recommended payment is $#{(debt[:payment] + pool).round(2)}"
       debt[:payment] += pool
       pool = 0.0
     end
@@ -97,7 +97,7 @@ end
 
 # List payments
 debts.each do |debt|
-  puts "PAY #{debt[:creditor]}: #{debt[:payment]}".blue.bold
+  puts "PAY #{debt[:creditor]}: #{debt[:payment].round(2)}".blue.bold
   total_debt -= debt[:payment]
 end
 

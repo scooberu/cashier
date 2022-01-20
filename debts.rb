@@ -58,41 +58,47 @@ end
 puts "AVAILABLE CASH: $#{pool}".green
 puts "\n\n"
 
-while pool > TARGET
-	# Check minimum payments
-	debts.each do |debt|
-		print "Enter the minimum payment due on the #{debt[:creditor]} account that you have not yet paid this month (RETURN if none): $"
-		minimum = gets.chomp
-		if minimum.nil? or minimum.empty? or minimum.to_f.zero?
-			debt[:minimum] = 0.0
-		else
-			debt[:minimum] = minimum.to_f
-			pool -= debt[:minimum]
-		end
-		debt[:payment] = debt[:minimum]
-		print "\n"
-	end
+# Check minimum payments
+debts.each do |debt|
+  print "Enter any minimum payment due on the #{debt[:creditor]} account that you have not yet paid this month (RETURN if none/already paid): $"
+  minimum = gets.chomp
+  if minimum.nil? or minimum.empty? or minimum.to_f.zero?
+    debt[:minimum] = 0.0
+  else
+    debt[:minimum] = minimum.to_f
+    pool -= debt[:minimum]
+  end
 
-	# Allocate remainder to accounts in order of descending APR
-	debts.each do |debt|
-		if pool <= 0.0
-			break
-		end
-
-		if debt[:balance] <= pool
-			pool -= (debt[:balance] - debt[:payment])
-			debt[:payment] = debt[:balance]
-		else
-			debt[:payment] += pool
-			pool = 0.0
-		end
-	end
-
-	# List payments
-	debts.each do |debt|
-		puts "PAY #{debt[:creditor]}: #{debt[:payment]}".blue.bold
-		total_debt -= debt[:payment]
-	end
-
-	puts "Projected debt after today's payments: $#{total_debt.to_i}".green.bold
+  debt[:payment] = debt[:minimum]
+  print "\n"
 end
+
+if pool > TARGET
+# Allocate remainder to accounts in order of descending APR
+  debts.each do |debt|
+    break if pool <= TARGET
+
+    if (debt[:balance] - debt[:payment]) <= pool
+      puts "LOG: available cash ($#{pool}) is greater than the balance of #{debt[:creditor]} debt (less any planned minimum payments); recommend paying #{debt[:creditor]} the full balance of $#{debt[:balance]}."
+      pool -= (debt[:balance] - debt[:payment])
+      puts "LOG: pool is now $#{pool}, after subtracting $#{debt[:balance]} (orig. balance) - $#{debt[:payment]} (any preexisting payment)"
+      debt[:payment] = debt[:balance]
+      puts "LOG: payment recommended for #{debt[:creditor]} is now $#{debt[:payment]}."
+    else
+      puts "LOG: available cash is not sufficient to cover the balance of #{debt[:creditor]} debt; recommend dumping the rest of your cash into lowering that balance."
+      puts "LOG: adding remaining pool of cash ($#{pool}) to any existing payment planned for #{debt[:creditor]} account; total recommended payment is $#{debt[:payment] + pool}"
+      debt[:payment] += pool
+      pool = 0.0
+    end
+  end
+else
+  puts "LOG: planned debt reduction costs are too high to go beyond minimum payments at this time; make those and move on. pool of available cash = $#{pool}; TARGET = #{TARGET}"
+end
+
+# List payments
+debts.each do |debt|
+  puts "PAY #{debt[:creditor]}: #{debt[:payment]}".blue.bold
+  total_debt -= debt[:payment]
+end
+
+puts "Projected debt after today's payments: $#{total_debt.to_i}".green.bold

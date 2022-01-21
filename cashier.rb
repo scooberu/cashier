@@ -6,7 +6,7 @@ RENT = 1900
 WEWORK = 200
 
 # Approx pool of cash week over week
-PAYCHECK = 4400
+PAYCHECK = 4100
 
 # Don't plan for spending that leaves you with less than this amount
 TARGET = 1100

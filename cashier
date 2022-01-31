@@ -12,18 +12,20 @@ require 'json'
 RENT = 1900
 WEWORK = 200
 
-# Approx pool of cash week over week
-PAYCHECK = 4100
-
 # Don't plan for spending that leaves you with less than this amount
 TARGET = 1100
 
 debts = [
-	{ creditor: "Chase",
+	{ creditor: "Chase::United",
 	  apr: 0.25,
     balance: nil,
     minimum: nil,
 	  payment: nil },
+  { creditor:"Chase::Amazon",
+    apr: 0.25,
+    balance: nil,
+    minimum: nil,
+    payment: nil },
 	{ creditor: "Klarna",
 	  apr: 0.13,
     balance: nil,
@@ -41,6 +43,23 @@ debts = [
 	  payment: nil },
 ]
 
+#
+# Get Available Cash
+#
+print "How much cash do you have on hand? ($4100): $"
+cash = gets.chomp
+
+CASH_ON_HAND = if cash.empty? || cash.nil?
+                 4100.0
+               else
+                 cash.to_f
+               end
+
+pool = CASH_ON_HAND - TARGET
+
+#
+# Get Balances
+#
 total_debt = 0.0
 
 begin
@@ -83,15 +102,19 @@ end
 
 puts "Total Debt: #{total_debt}".red.bold
 
+#
 # Sort debts by APR
+#
 debts = debts.sort_by { |k| k[:apr] }
 debts.reverse!
 
+#
 # Figure out if this paycheck has to cover rent as well as other 1st-of-the-month-type-things
+#
 today = Time.now
 first_of_next_month = Time.new(today.year, (today.month + 1), 1)
 
-pool = PAYCHECK - TARGET
+pool = CASH_ON_HAND - TARGET
 
 if (first_of_next_month - today) <= 1209600
 	puts "Your next paycheck needs rent money! Pay the rent. Removing rent money from available pool...".red
@@ -102,7 +125,9 @@ end
 puts "AVAILABLE CASH: $#{pool}".green
 puts "\n\n"
 
+#
 # Check minimum payments
+#
 debts.each do |debt|
   cmd = "Enter any minimum payment due to #{debt[:creditor]} & not yet paid this month"
   if debt[:minimum].nil?
@@ -144,6 +169,7 @@ if pool > 0.0
     end
   end
 else
+# Advise to make only minimum payments if there's not enough cash to do more
   puts "LOG: planned debt reduction costs are too high to go beyond minimum payments at this time; make those and move on. pool of available cash = $#{pool}; TARGET = #{TARGET}"
 end
 

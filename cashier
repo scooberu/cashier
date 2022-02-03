@@ -22,7 +22,7 @@ debts = [
     minimum: nil,
 	  payment: nil },
   { creditor:"Chase::Amazon",
-    apr: 0.25,
+    apr: 0.229,
     balance: nil,
     minimum: nil,
     payment: nil },
@@ -122,7 +122,7 @@ if (first_of_next_month - today) <= 1209600
 	pool -= WEWORK
 end
 
-puts "AVAILABLE CASH: $#{pool}".green
+puts "AVAILABLE CASH: $#{pool.round(2)}".green
 puts "\n\n"
 
 #

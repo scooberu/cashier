@@ -10,7 +10,6 @@ require 'json'
 
 # Mandatory expenses sometimes
 RENT = 1900
-WEWORK = 200
 
 # Don't plan for spending that leaves you with less than this amount
 TARGET = 1100
@@ -119,7 +118,6 @@ pool = CASH_ON_HAND - TARGET
 if (first_of_next_month - today) <= 1209600
 	puts "Your next paycheck needs rent money! Pay the rent. Removing rent money from available pool...".red
 	pool -= RENT
-	pool -= WEWORK
 end
 
 puts "AVAILABLE CASH: $#{pool.round(2)}".green

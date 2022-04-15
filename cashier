@@ -12,7 +12,7 @@ require 'json'
 RENT = 1900
 
 # Don't plan for spending that leaves you with less than this amount
-TARGET = 1100
+TARGET = 1500
 
 debts = [
 	{ creditor: "Chase::United",
@@ -38,7 +38,7 @@ debts = [
 	{ creditor: "Apple",
 	  apr: 0.0,
     balance: nil,
-    minimum: 306.79,
+    minimum: 324.83,
 	  payment: nil },
 ]
 
@@ -61,36 +61,44 @@ pool = CASH_ON_HAND - TARGET
 #
 total_debt = 0.0
 
-begin
-  file = File.read('.cashier')
-  cashier_cache = JSON.parse(file)
-  debts.each do |debt|
-    cashier_cache.each do |c|
-      if c['creditor'] == debt[:creditor]
-        debt[:balance] = c['balance']
-      else
-        next
+print "\nTry to load from .cashier file? (Y/n): "
+load_dotfile = gets.chomp
+if load_dotfile
+  begin
+    print "\nTry to load from .cashier file? (Y/n): "
+    load_dotfile = gets.chomp
+    if load_dotfile
+    file = File.read('.cashier')
+    cashier_cache = JSON.parse(file)
+    debts.each do |debt|
+      cashier_cache.each do |c|
+        if c['creditor'] == debt[:creditor]
+          debt[:balance] = c['balance']
+        else
+          next
+        end
       end
     end
+
+    puts "Found the following balances in the .cashier file:".green
+    debts.each { |d| puts "#{d[:creditor]}: #{d[:balance].round(2)}".bold }
+
+    print "\nIs this correct? (Y/n): "
+    correct_balances = gets.chomp
+  rescue Errno::ENOENT => e
+    puts "No .cashier file found. Defaulting to manual input..."
+    correct_balances = 'n'
   end
 
-  puts "Found the following balances in the .cashier file:".green
-  debts.each { |d| puts "#{d[:creditor]}: #{d[:balance].round(2)}".bold }
-
-  print "\nIs this correct? (Y/n): "
-  correct_balances = gets.chomp
-rescue Errno::ENOENT => e
-  puts "No .cashier file found. Defaulting to manual input..."
-  correct_balances = 'n'
-end
-
-unless correct_balances.downcase == 'y' or correct_balances.downcase == 'yes' or correct_balances.empty?
-  debts.each do |debt|
-    print "Enter #{debt[:creditor]} balance: $"
-    debt[:balance] = gets.chomp.to_f
+  unless correct_balances.downcase == 'y' or correct_balances.downcase == 'yes' or correct_balances.empty?
+    debts.each do |debt|
+      print "Enter #{debt[:creditor]} balance: $"
+      debt[:balance] = gets.chomp.to_f
+    end
   end
 end
 
+=begin
 debts.each do |debt|
   if debt[:balance].nil? or debt[:balance].zero?
     debts.delete debt
@@ -98,6 +106,7 @@ debts.each do |debt|
     total_debt += debt[:balance]
   end
 end
+=end
 
 puts "Total Debt: #{total_debt}".red.bold
 
@@ -110,14 +119,24 @@ debts.reverse!
 #
 # Figure out if this paycheck has to cover rent as well as other 1st-of-the-month-type-things
 #
-today = Time.now
-first_of_next_month = Time.new(today.year, (today.month + 1), 1)
 
-pool = CASH_ON_HAND - TARGET
+# Manual Check
+print "\nUse automatic rent calculator? (Y/n): "
+auto_rent = gets.chomp
 
-if (first_of_next_month - today) <= 1209600
-	puts "Your next paycheck needs rent money! Pay the rent. Removing rent money from available pool...".red
-	pool -= RENT
+if auto_rent.downcase == 'n' or auto_rent.downcase == 'no'
+  print "\nSubtract rent payment? (y/N): "
+  subtract_rent = gets.chomp
+  unless subtract_rent.downcase == 'n' or subtract_rent.downcase == 'no' or subtract_rent.empty?
+    pool -= RENT
+  end
+else
+  today = Time.now
+  first_of_next_month = Time.new(today.year, (today.month + 1), 1)
+  if (first_of_next_month - today) <= 1209600
+	  puts "Your next paycheck needs rent money! Pay the rent. Removing rent money from available pool...".red
+	  pool -= RENT
+  end
 end
 
 puts "AVAILABLE CASH: $#{pool.round(2)}".green
@@ -137,8 +156,8 @@ debts.each do |debt|
   print cmd
   minimum = gets.chomp
 
-  if minimum.nil? or minimum.empty? or minimum.to_f.zero?
-    debt[:minimum] ||= 0.0
+  if minimum.nil? || minimum.empty? || minimum.to_f.zero?
+    debt[:minimum] = 0.0
   else
     debt[:minimum] = minimum.to_f
     pool -= debt[:minimum]
@@ -156,12 +175,8 @@ if pool > 0.0
     if (debt[:balance] - debt[:payment]) <= pool
       puts "LOG: available cash ($#{pool}) is greater than the balance of #{debt[:creditor]} debt (less any planned minimum payments); recommend paying #{debt[:creditor]} the full balance of $#{debt[:balance].round(2)}."
       pool -= (debt[:balance] - debt[:payment])
-      puts "LOG: pool is now $#{pool}, after subtracting $#{debt[:balance].round(2)} (orig. balance) - $#{debt[:payment].round(2)} (any preexisting payment)"
       debt[:payment] = debt[:balance]
-      puts "LOG: payment recommended for #{debt[:creditor]} is now $#{debt[:payment].round(2)}."
     else
-      puts "LOG: available cash is not sufficient to cover the balance of #{debt[:creditor]} debt; recommend dumping the rest of your cash into lowering that balance."
-      puts "LOG: adding remaining pool of cash ($#{pool.round(2)}) to any existing payment planned for #{debt[:creditor]} account; total recommended payment is $#{(debt[:payment] + pool).round(2)}"
       debt[:payment] += pool
       pool = 0.0
     end

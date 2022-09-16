@@ -25,11 +25,6 @@ debts = [
     balance: nil,
     minimum: nil,
     payment: nil },
-	{ creditor: "Klarna",
-	  apr: 0.13,
-    balance: nil,
-    minimum: 169.04,
-	  payment: nil },
 	{ creditor: "SFFCU",
 	  apr: 0.049,
     balance: nil,
@@ -98,11 +93,10 @@ if [correct_balances, load_dotfile].each { |resp| resp.empty? or resp.downcase =
 end
 
 debts.each do |debt|
-  if debt[:balance].nil? or debt[:balance].zero?
-    debts.delete debt
-  else
-    total_debt += debt[:balance]
+  if debt[:balance].nil?
+    debts[:balance] = 0.0
   end
+    total_debt += debt[:balance]
 end
 
 puts "Total Debt: #{total_debt}".red.bold

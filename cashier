@@ -193,4 +193,5 @@ end
 puts "Projected debt after today's payments: $#{total_debt.to_i}".green.bold
 
 # Write balances to file
+puts "All done! Writing current state of finances to .cashier.".bold
 File.write('.cashier', JSON.dump(debts))

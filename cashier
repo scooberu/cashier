@@ -85,7 +85,7 @@ if load_dotfile.downcase == 'y' or load_dotfile.downcase == 'yes' or load_dotfil
 end
 
 correct_balances ||= ''
-if [correct_balances, load_dotfile].each { |resp| resp.empty? or resp.downcase == 'y' }
+if correct_balances.empty? or correct_balances.downcase == 'n'
   debts.each do |debt|
     print "Enter #{debt[:creditor]} balance: $"
     debt[:balance] = gets.chomp.to_f
@@ -99,7 +99,7 @@ debts.each do |debt|
     total_debt += debt[:balance]
 end
 
-puts "Total Debt: #{total_debt}".red.bold
+puts "Total Debt: #{total_debt.round(2)}".red.bold
 
 #
 # Sort debts by APR
@@ -147,7 +147,13 @@ debts.each do |debt|
   print cmd
   minimum = gets.chomp
 
-  if minimum.nil? || minimum.empty? || minimum.to_f.zero?
+  if minimum.nil? || minimum.empty?
+    if debt[:minimum].nil?
+      debt[:minimum] = 0.0
+    else
+      pool -= debt[:minimum]
+    end
+  elsif minimum.to_f.zero?
     debt[:minimum] = 0.0
   else
     debt[:minimum] = minimum.to_f
@@ -174,7 +180,7 @@ if pool > 0.0
   end
 else
 # Advise to make only minimum payments if there's not enough cash to do more
-  puts "LOG: planned debt reduction costs are too high to go beyond minimum payments at this time; make those and move on. pool of available cash = $#{pool}; TARGET = #{TARGET}"
+  puts "Planned debt reduction costs are too high to go beyond minimum payments at this time; make those and move on."
 end
 
 # List payments

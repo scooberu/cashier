@@ -13,14 +13,6 @@ require 'tty-prompt'
 
 prompt = TTY::Prompt.new
 
-@config = {
-            debts: [],
-            expenses: 0.0,
-            target_remainder: 0.0,
-            pay_frequency: 2,
-            paycheck_amt: 0.0
-          }
-
 #
 # Get Balances
 #
@@ -48,7 +40,7 @@ else
 end
 
 if ENV['DEBUG']
-  puts "Read the following config from disk:"
+  puts "Configuration hash:"
   ap @config
 end
 

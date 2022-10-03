@@ -16,11 +16,11 @@ require 'time'
 SECONDS_IN_DAY = 86400
 
 @prompt = TTY::Prompt.new
-
-#
-# Get Balances
-#
 @total_debt = 0.0
+
+##################
+# Helper Methods #
+##################
 
 def symbolize_keys(hash)
   result = {}
@@ -30,6 +30,39 @@ def symbolize_keys(hash)
 
   result
 end
+
+def days_in_month(year, month)
+  Date.new(year, month, -1).day
+end
+
+def rent_calc(pay_interval)
+  today = Time.now
+  days_in_current_month = days_in_month(today.year, today.month)
+  first_of_next_month = Time.new(today.year, (today.month + 1), 1)
+  rent_interval_in_seconds = case pay_interval
+                             when 1 # weekly
+                               SECONDS_IN_DAY * 7
+                             when 2 # every other week
+                               SECONDS_IN_DAY * 14
+                             when 3 # twice monthly
+                               ((SECONDS_IN_DAY * days_in_current_month) / 2).to_i
+                             when 4 # monthly
+                               SECONDS_IN_DAY * days_in_current_month
+                             else
+                               raise "Something went wrong with rent calculation! (Hit a segment of code we should never have hit; likely cause: invalid selection for paycheck interval)"
+                             end
+
+  if (first_of_next_month - today) <= rent_interval_in_seconds
+    @prompt.warn "Your next paycheck has to cover rent money! Pay the rent. Removing rent money from available pool..."
+    @pool -= @rent
+  else
+    @prompt.ok "Your next rent payment is more than 1 pay period away; no need to factor it in here!"
+  end
+end
+
+###########################################
+# Get User Configuration (Debts & Income) #
+###########################################
 
 load_dotfile = @prompt.yes?("Try to load cached settings from .cashier file?")
 
@@ -60,7 +93,7 @@ if ENV['DEBUG']
   ap @config
 end
 
-@rent = @prompt.ask('What are your mandatory recurring monthly expenses (e.g. rent) $', default: @config[:expenses], convert: :float)
+@rent = @prompt.ask('What is your rent? $', default: @config[:expenses], convert: :float)
 @target = @prompt.ask('How much money do you want to have leftover after expenses and payments? $', default: @config[:target_remainder], convert: :float)
 @interval = @prompt.select("How frequently do you get paid?", default: @config[:pay_frequency]) do |menu|
   menu.choice "Every week", 1
@@ -102,57 +135,27 @@ end
 
 puts "Total Debt: #{@total_debt.round(2)}".red.bold
 
-#
-# Get Available Cash
-#
+######################
+# Get Available Cash #
+######################
 cash = @prompt.ask("How much cash do you have on hand this week? $", default: @income, convert: :float)
 
 CASH_ON_HAND = cash
 
 @pool = CASH_ON_HAND - @target
 
-#
-# Sort debts by APR
-#
+#####################
+# Sort debts by APR #
+#####################
 debts = @config[:debts].sort_by { |k| k[:apr] }
 @config[:debts].reverse!
 
-#
-# Figure out if this paycheck has to cover rent as well as other 1st-of-the-month-type-things
-#
+#################################################
+# Figure out if this paycheck has to cover rent #
+#################################################
 
-# Manual Check
+# Automatic or manual rent checker
 auto_rent = @prompt.yes?('Use the auto-rent calculator to subtract rent from this payment (if necessary)?')
-
-
-def days_in_month(year, month)
-  Date.new(year, month, -1).day
-end
-
-def rent_calc(pay_interval)
-  today = Time.now
-  days_in_current_month = days_in_month(today.year, today.month)
-  first_of_next_month = Time.new(today.year, (today.month + 1), 1)
-  rent_interval_in_seconds = case pay_interval
-                             when 1 # weekly
-                               SECONDS_IN_DAY * 7
-                             when 2 # every other week
-                               SECONDS_IN_DAY * 14
-                             when 3 # twice monthly
-                               ((SECONDS_IN_DAY * days_in_current_month) / 2).to_i
-                             when 4 # monthly
-                               SECONDS_IN_DAY * days_in_current_month
-                             else
-                               raise "Something went wrong with rent calculation! (Hit a segment of code we should never have hit; likely cause: invalid selection for paycheck interval)"
-                             end
-
-  if (first_of_next_month - today) <= rent_interval_in_seconds
-    @prompt.warn "Your next paycheck has to cover rent money! Pay the rent. Removing rent money from available pool..."
-    @pool -= @rent
-  else
-    @prompt.ok "Your next rent payment is more than 1 pay period away; no need to factor it in here!"
-  end
-end
 
 if auto_rent
   rent_calc(@interval)
@@ -165,9 +168,9 @@ end
 
 @prompt.ok "AVAILABLE CASH: $#{@pool.round(2)}"
 
-#
-# Check minimum payments
-#
+##########################
+# Check minimum payments #
+##########################
 @config[:debts].each do |debt|
   minimum = @prompt.ask("Enter any minimum payment due to #{debt[:creditor]} & not yet paid this month", default: debt[:minimum], convert: :float)
 
@@ -195,7 +198,9 @@ else
   @prompt.warn "Planned debt reduction costs are too high to go beyond minimum payments at this time; make those and move on."
 end
 
-# List payments
+#################
+# List payments #
+#################
 @config[:debts].each do |debt|
   @prompt.ok "PAY #{debt[:creditor]}: #{debt[:payment].round(2)}"
   @total_debt -= debt[:payment]
@@ -204,6 +209,8 @@ end
 
 @prompt.ok "Projected debt after today's payments: $#{@total_debt.to_i}"
 
-# Write balances to file
+##########################
+# Write balances to file #
+##########################
 @prompt.ok "All done! Writing current state of finances to .cashier."
 File.write('.cashier', Base64.encode64(JSON.dump(@config)))

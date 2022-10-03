@@ -8,4 +8,7 @@ Gem::Specification.new do |s|
   s.email       = 'scott@beru.dev'
   s.license     = "Beerware"
   s.files       = Dir['lib/*.rb']
+  s.add_dependency 'awesome_print'
+  s.add_dependency 'colorize'
+  s.add_dependency 'tty-prompt'
 end

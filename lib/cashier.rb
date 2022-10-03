@@ -1,10 +1,5 @@
 #!/usr/bin/env ruby
 
-# Bundler setup
-require 'rubygems'
-require 'bundler/setup'
-Bundler.require(:default)
-
 require 'awesome_print'
 require 'base64'
 require 'colorize'

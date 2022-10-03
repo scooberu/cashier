@@ -20,18 +20,30 @@ SECONDS_IN_DAY = 86400
 #
 # Get Balances
 #
-total_debt = 0.0
+@total_debt = 0.0
+
+def symbolize_keys(hash)
+  result = {}
+  hash.each do |k,v|
+    result[k.to_sym] = hash[k]
+  end
+
+  result
+end
 
 load_dotfile = @prompt.yes?("Try to load cached settings from .cashier file?")
 
 if load_dotfile
   begin
-    File.read('.cashier') do |file|
-      @config = JSON.parse(Base64.decode64(file))
-    end
+    file = File.read('.cashier')
+    @config = JSON.parse(Base64.decode64(file))
   rescue Errno::ENOENT => e
     @prompt.warn "No .cashier file found. Defaulting to manual input..."
     correct_balances = false
+  end
+
+  unless @config.empty?
+    @config = symbolize_keys(@config)
   end
 else
   @config = {
@@ -85,10 +97,10 @@ while !correct_balances
 end
 
 @config[:debts].each do |debt|
-  total_debt += debt[:balance]
+  @total_debt += debt[:balance]
 end
 
-puts "Total Debt: #{total_debt.round(2)}".red.bold
+puts "Total Debt: #{@total_debt.round(2)}".red.bold
 
 #
 # Get Available Cash
@@ -186,11 +198,11 @@ end
 # List payments
 @config[:debts].each do |debt|
   @prompt.ok "PAY #{debt[:creditor]}: #{debt[:payment].round(2)}"
-  total_debt -= debt[:payment]
+  @total_debt -= debt[:payment]
   debt[:balance] -= debt[:payment]
 end
 
-@prompt.ok "Projected debt after today's payments: $#{total_debt.to_i}"
+@prompt.ok "Projected debt after today's payments: $#{@total_debt.to_i}"
 
 # Write balances to file
 @prompt.ok "All done! Writing current state of finances to .cashier."

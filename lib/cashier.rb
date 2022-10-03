@@ -27,10 +27,10 @@ load_dotfile = @prompt.yes?("Try to load cached settings from .cashier file?")
 if load_dotfile
   begin
     File.read('.cashier') do |file|
-      @config = JSON.parse(base64.decode64(file))
+      @config = JSON.parse(Base64.decode64(file))
     end
   rescue Errno::ENOENT => e
-    puts "No .cashier file found. Defaulting to manual input..."
+    @prompt.warn "No .cashier file found. Defaulting to manual input..."
     correct_balances = false
   end
 else
@@ -44,7 +44,7 @@ else
 end
 
 if ENV['DEBUG']
-  puts "Configuration hash:"
+  @prompt.warn "Configuration hash:"
   ap @config
 end
 
@@ -65,14 +65,14 @@ end
 @config[:paycheck_amt] = @income
 
 unless @config[:debts].empty?
-  puts "Found the following outstanding debts:"
+  @prompt.say "Found the following outstanding debts:"
   ap @config[:debts]
 
   correct_balances = @prompt.yes?('Does this look correct?')
 end
 
 correct_balances ||= false
-puts "Please enter any outstanding debts:".bold unless correct_balances
+@prompt.say "Please enter any outstanding debts:" unless correct_balances
 while !correct_balances
   tmp_debt = {}
   tmp_debt[:creditor] = @prompt.ask('What is the name of this creditor?')
@@ -135,10 +135,10 @@ def rent_calc(pay_interval)
                              end
 
   if (first_of_next_month - today) <= rent_interval_in_seconds
-    puts "Your next paycheck has to cover rent money! Pay the rent. Removing rent money from available pool...".red
+    @prompt.warn "Your next paycheck has to cover rent money! Pay the rent. Removing rent money from available pool..."
     @pool -= @rent
   else
-    puts "Your next rent payment is more than 1 pay period away; no need to factor it in here!".green
+    @prompt.ok "Your next rent payment is more than 1 pay period away; no need to factor it in here!"
   end
 end
 
@@ -151,8 +151,7 @@ else
   end
 end
 
-puts "AVAILABLE CASH: $#{@pool.round(2)}".green
-puts "\n\n"
+@prompt.ok "AVAILABLE CASH: $#{@pool.round(2)}"
 
 #
 # Check minimum payments
@@ -171,7 +170,7 @@ if @pool > 0.0
     break if @pool <= 0
 
     if (debt[:balance] - debt[:payment]) <= @pool
-      puts "LOG: available cash ($#{@pool}) is greater than the balance of #{debt[:creditor]} debt (less any planned minimum payments); recommend paying #{debt[:creditor]} the full balance of $#{debt[:balance].round(2)}." if ENV['DEBUG']
+      @prompt.warn "LOG: available cash ($#{@pool}) is greater than the balance of #{debt[:creditor]} debt (less any planned minimum payments); recommend paying #{debt[:creditor]} the full balance of $#{debt[:balance].round(2)}." if ENV['DEBUG']
       @pool -= (debt[:balance] - debt[:payment])
       debt[:payment] = debt[:balance]
     else
@@ -181,18 +180,18 @@ if @pool > 0.0
   end
 else
 # Advise to make only minimum payments if there's not enough cash to do more
-  puts "Planned debt reduction costs are too high to go beyond minimum payments at this time; make those and move on."
+  @prompt.warn "Planned debt reduction costs are too high to go beyond minimum payments at this time; make those and move on."
 end
 
 # List payments
 @config[:debts].each do |debt|
-  puts "PAY #{debt[:creditor]}: #{debt[:payment].round(2)}".blue.bold
+  @prompt.ok "PAY #{debt[:creditor]}: #{debt[:payment].round(2)}"
   total_debt -= debt[:payment]
   debt[:balance] -= debt[:payment]
 end
 
-puts "Projected debt after today's payments: $#{total_debt.to_i}".green.bold
+@prompt.ok "Projected debt after today's payments: $#{total_debt.to_i}"
 
 # Write balances to file
-puts "All done! Writing current state of finances to .cashier.".bold
+@prompt.ok "All done! Writing current state of finances to .cashier."
 File.write('.cashier', Base64.encode64(JSON.dump(@config)))

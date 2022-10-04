@@ -171,7 +171,7 @@ end
 
   @pool -= minimum unless minimum.zero?
 
-  debt[:payment] = debt[:minimum]
+  debt[:payment] = minimum
 end
 
 if @pool > 0.0

@@ -72,6 +72,13 @@ if load_dotfile
 
   unless @config.empty?
     @config = symbolize_keys(@config)
+    unless @config[:debts].empty?
+      tmp_debts = []
+      @config[:debts].each do |debt|
+        tmp_debts.push(symbolize_keys(debt))
+      end
+      @config[:debts] = tmp_debts
+    end
   end
 else
   @config = {

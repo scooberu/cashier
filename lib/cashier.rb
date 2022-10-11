@@ -150,7 +150,12 @@ CASH_ON_HAND = cash
 # Sort debts by APR #
 #####################
 debts = @config[:debts].sort_by { |k| k[:apr] }
-@config[:debts].reverse!
+debts.reverse!
+
+if ENV['DEBUG']
+  @prompt.warn "debts hash:"
+  ap debts
+end
 
 #################################################
 # Figure out if this paycheck has to cover rent #

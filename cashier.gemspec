@@ -9,6 +9,6 @@ Gem::Specification.new do |s|
   s.license     = "Beerware"
   s.files       = Dir['lib/*.rb']
   s.add_dependency 'awesome_print', '1.9.2'
-  s.add_dependency 'colorize', '1.0.0'
+  s.add_dependency 'colorize', '1.1.0'
   s.add_dependency 'tty-prompt', '0.23.1'
 end
